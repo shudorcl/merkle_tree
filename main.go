@@ -30,27 +30,28 @@ func main() {
 		fmt.Println("Getting folderlist...")
 		folderResp := downloader.GetFilelist(*url)
 		if folderResp.Code == "0" {
-			fmt.Println("Getting list wrong")
+			log.Println("Getting list wrong")
 			os.Exit(0)
 		}
-		fmt.Println("Publickey:", folderResp.PublicKey)
-		fmt.Println("Folderlist:", folderResp.FolderList)
+		log.Println("Publickey:", folderResp.PublicKey)
+		log.Println("Folderlist:", folderResp.FolderList)
 		var selection string
 		fmt.Print("What's your selection? ")
 		fmt.Scanln(&selection)
+		log.Println("User selection:", selection)
 		merkleList := downloader.GetMerkleList(*url, selection)
 		if merkleList.Code == "0" {
-			fmt.Println("Wrong Folder. Please check input.")
+			log.Println("Wrong Folder. Please check input.")
 		} else {
-			fmt.Println("Filelist", merkleList.FileList)
-			fmt.Printf("MerkleSign:%X\n", merkleList.MerkleSign)
-			fmt.Printf("MerkleRoot:%X\n", merkleList.MerkleRoot)
+			log.Println("Filelist", merkleList.FileList)
+			log.Printf("MerkleSign:%X\n", merkleList.MerkleSign)
+			log.Printf("MerkleRoot:%X\n", merkleList.MerkleRoot)
 			downloadDir := "." + "/DownloadFiles/" + selection
 			err := os.MkdirAll(downloadDir, os.ModePerm)
 			if err != nil {
 				panic(err)
 			}
-			fmt.Println("Start downloading...")
+			log.Println("Start downloading...")
 			downloadPathList := []string{}
 			for _, filename := range merkleList.FileList {
 				downloadUrl := *url + "/MerkleFiles/" + selection + "/" + filename
@@ -59,23 +60,24 @@ func main() {
 				downloader.DownloadFile(downloadPath, downloadUrl)
 			}
 			if *testMode {
-				fmt.Println("Test mode on. Change the first file!")
+				log.Println("Test mode on. Change the first file!")
 				downloader.TestModeBreak(downloadPathList[0])
 			}
-			fmt.Println("Download Complete. Verfying...")
+			log.Println("Download Complete. Verfying...")
 			if downloader.VerifyMerkleSign(folderResp.PublicKey, merkleList) {
-				fmt.Println("Verify Complete.")
+				log.Println("Verify Complete.")
 				downloadRoot, err := downloader.CountMerkle(downloadPathList)
 				if err != nil {
 					panic(err)
 				}
+				log.Printf("DownloadMerkleRoot:%X\n", downloadRoot)
 				if bytes.Equal(downloadRoot, merkleList.MerkleRoot) {
-					fmt.Println("The files are consistent.")
+					log.Println("ROOT EQUAL. Files are consistent.")
 				} else {
-					fmt.Println("The files are NOT consistent!")
+					log.Println("Files are NOT consistent!")
 				}
 			} else {
-				fmt.Println("Verify Fail!")
+				log.Println("Verify Fail!")
 			}
 		}
 	}

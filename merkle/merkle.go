@@ -11,7 +11,6 @@ import (
 
 type Substance interface {
 	CalculateHash() ([]byte, error)
-	Equals(other Substance) (bool, error)
 }
 
 type FileContent struct {
@@ -31,10 +30,6 @@ func (t FileContent) CalculateHash() ([]byte, error) {
 	return hashFunc.Sum(nil), nil
 }
 
-func (t FileContent) Equals(other Substance) (bool, error) {
-	return t.FileName == other.(FileContent).FileName, nil
-}
-
 type Node struct {
 	Tree   *Merkle
 	Parent *Node
@@ -51,11 +46,11 @@ type Merkle struct {
 	hashFunc func() hash.Hash
 }
 
-func NewTree(cs []Substance) (*Merkle, error) {
+func NewTree(s []Substance) (*Merkle, error) {
 	t := &Merkle{
 		hashFunc: sha256.New,
 	}
-	root, leafs, err := buildWithSubstance(cs, t)
+	root, leafs, err := buildWithSubstance(s, t)
 	if err != nil {
 		return nil, err
 	}
@@ -65,19 +60,19 @@ func NewTree(cs []Substance) (*Merkle, error) {
 	return t, nil
 }
 
-func buildWithSubstance(subs []Substance, t *Merkle) (*Node, []*Node, error) {
-	if len(subs) == 0 {
+func buildWithSubstance(subList []Substance, t *Merkle) (*Node, []*Node, error) {
+	if len(subList) == 0 {
 		return nil, nil, errors.New("error: cannot construct tree with no content")
 	}
 	var leafs []*Node
-	for _, c := range subs {
-		calculateHash, err := c.CalculateHash()
+	for _, s := range subList {
+		calculateHash, err := s.CalculateHash()
 		if err != nil {
 			return nil, nil, err
 		}
 		leafs = append(leafs, &Node{
 			Hash: calculateHash,
-			Sub:  c,
+			Sub:  s,
 			Tree: t,
 		})
 	}
@@ -89,39 +84,39 @@ func buildWithSubstance(subs []Substance, t *Merkle) (*Node, []*Node, error) {
 		}
 		leafs = append(leafs, duplicate)
 	}
-	root, err := buildIntermediate(leafs, t)
+	root, err := buildMiddleLayers(leafs, t)
 	if err != nil {
 		return nil, nil, err
 	}
 	return root, leafs, nil
 }
 
-func buildIntermediate(nl []*Node, t *Merkle) (*Node, error) {
+func buildMiddleLayers(nodeList []*Node, t *Merkle) (*Node, error) {
 	var nodes []*Node
-	for i := 0; i < len(nl); i += 2 {
+	for i := 0; i < len(nodeList); i += 2 {
 		h := t.hashFunc()
 		var left, right = i, i + 1
-		if i+1 == len(nl) {
+		if i+1 == len(nodeList) {
 			right = i
 		}
-		chash := append(nl[left].Hash, nl[right].Hash...)
+		chash := append(nodeList[left].Hash, nodeList[right].Hash...)
 		if _, err := h.Write(chash); err != nil {
 			return nil, err
 		}
 		n := &Node{
-			Left:  nl[left],
-			Right: nl[right],
+			Left:  nodeList[left],
+			Right: nodeList[right],
 			Hash:  h.Sum(nil),
 			Tree:  t,
 		}
 		nodes = append(nodes, n)
-		nl[left].Parent = n
-		nl[right].Parent = n
-		if len(nl) == 2 {
+		nodeList[left].Parent = n
+		nodeList[right].Parent = n
+		if len(nodeList) == 2 {
 			return n, nil
 		}
 	}
-	return buildIntermediate(nodes, t)
+	return buildMiddleLayers(nodes, t)
 }
 
 func (m *Merkle) RootHash() []byte {

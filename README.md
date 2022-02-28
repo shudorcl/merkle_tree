@@ -18,12 +18,11 @@
 
 #### Substance接口
 
-定义了Substance接口，其中包含比较函数和计算哈希函数，用于规约各种信息到结点之间的转化
+定义了Substance接口，其中包含计算哈希函数，用于规约各种信息到结点之间的转化
 
 ```go
 type Substance interface {
 	CalculateHash() ([]byte, error)
-	Equals(other Substance) (bool, error)
 }
 ```
 
@@ -45,10 +44,6 @@ func (t FileContent) CalculateHash() ([]byte, error) {
 	}
 	defer file.Close()
 	return hashFunc.Sum(nil), nil
-}
-
-func (t FileContent) Equals(other Substance) (bool, error) {
-	return t.FileName == other.(FileContent).FileName, nil
 }
 ```
 
@@ -99,7 +94,7 @@ func NewTree(cs []Substance) (*Merkle, error) {
 }
 ```
 
-buildWithSubstance函数用于将满足Substance接口的结构体转化为第一层结点，buildIntermediate函数则递归逐层建立Merkle树
+buildWithSubstance函数用于将满足Substance接口的结构体转化为第一层结点，buildMiddleLayers函数则递归逐层建立Merkle树
 
 ```go
 func buildWithSubstance(subs []Substance, t *Merkle) (*Node, []*Node, error) {
@@ -189,7 +184,7 @@ type FolderListResponse struct {
 
 用户选择后，下载器再对`/getfile?file={文件夹}`发送GET请求，此时文件服务器会即时计算这组文件的Merkle树根并签名，返回给下载器Merkle树根的签名和文件列表
 
-这之后，下载器根据返回的文件列表下载文件，最后在本地计算这组文件的Merkle树根，并对数字签名进行验证，若验证成功，则再比较Merkle树根，若Merkle树根依然一致，则说明下载的文件与服务器的一致
+这之后，下载器根据返回的文件列表下载文件，最后在本地计算这组文件的Merkle树根，并对数字签名进行验证，若验证成功，则再比较Merkle树根，若Merkle树根依然一致，则说明下载的文件与服务器的一致，校验完成
 
 ## 闲谈
 
