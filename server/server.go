@@ -45,6 +45,7 @@ func MerkleHandler(w http.ResponseWriter, r *http.Request) {
 	findFlag := true
 	if ok {
 		name := keys[0]
+		log.Println("Recieved get ask for file", name)
 		for _, file := range workFilelist {
 			if file == name {
 				findDirectory := workDirectory + "/" + name
@@ -52,13 +53,15 @@ func MerkleHandler(w http.ResponseWriter, r *http.Request) {
 				if err != nil {
 					panic(err)
 				}
+				log.Println("Calculating merkle tree for", name)
 				merkleRoot := merkleCalculate(findDirectory)
 				signature, err := rsa.SignPSS(rand.Reader, privateKey, crypto.SHA256, merkleRoot, nil)
 				if err != nil {
 					panic(err)
 				}
 				resp = MerkleResponse{
-					Code: "1", FileList: filelist,
+					Code:       "1",
+					FileList:   filelist,
 					MerkleRoot: merkleRoot,
 					MerkleSign: signature,
 				}
@@ -79,7 +82,7 @@ func MerkleHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func FilelistHandler(w http.ResponseWriter, r *http.Request) {
-
+	log.Println("Recieved get ask for filelist. ")
 	resp := FolderListResponse{
 		Code:       "1",
 		FolderList: workFilelist,
@@ -130,7 +133,8 @@ func merkleCalculate(directory string) []byte {
 	}
 	for _, file := range files {
 		if !file.IsDir() {
-			merkleList = append(merkleList, merkle.FileContent{FileName: directory + "/" + file.Name()})
+			merkleList = append(merkleList,
+				merkle.FileContent{FileName: directory + "/" + file.Name()})
 		}
 	}
 	t, err := merkle.NewTree(merkleList)

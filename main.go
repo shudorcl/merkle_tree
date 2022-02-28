@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"log"
@@ -62,10 +63,19 @@ func main() {
 				downloader.TestModeBreak(downloadPathList[0])
 			}
 			fmt.Println("Download Complete. Verfying...")
-			if downloader.VerifyMerkleSign(downloadPathList, folderResp.PublicKey, merkleList) {
-				fmt.Println("Verify Complete. The files are consistent")
+			if downloader.VerifyMerkleSign(folderResp.PublicKey, merkleList) {
+				fmt.Println("Verify Complete.")
+				downloadRoot, err := downloader.CountMerkle(downloadPathList)
+				if err != nil {
+					panic(err)
+				}
+				if bytes.Equal(downloadRoot, merkleList.MerkleRoot) {
+					fmt.Println("The files are consistent.")
+				} else {
+					fmt.Println("The files are NOT consistent!")
+				}
 			} else {
-				fmt.Println("Verify Fail. The files are NOT consistent!")
+				fmt.Println("Verify Fail!")
 			}
 		}
 	}

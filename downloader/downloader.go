@@ -13,6 +13,7 @@ import (
 	"github.com/shudorcl/merkle_tree/server"
 )
 
+// GetFilelist 获取文件夹列表和公钥
 func GetFilelist(url string) server.FolderListResponse {
 	resp, err := http.Get(url + "/getfilelist")
 	if err != nil {
@@ -30,6 +31,7 @@ func GetFilelist(url string) server.FolderListResponse {
 	return res
 }
 
+// GetMerkleList 获取文件夹下的文件列表和对应的Merkle树根
 func GetMerkleList(url string, folder string) server.MerkleResponse {
 	resp, err := http.Get(url + "/getfile?file=" + folder)
 	if err != nil {
@@ -47,6 +49,7 @@ func GetMerkleList(url string, folder string) server.MerkleResponse {
 	return res
 }
 
+// DownloadFile 下载指定URL的文件到指定路径
 func DownloadFile(filepath string, url string) error {
 	resp, err := http.Get(url)
 	if err != nil {
@@ -62,22 +65,22 @@ func DownloadFile(filepath string, url string) error {
 	return err
 }
 
-func VerifyMerkleSign(pathList []string, pubilcKey rsa.PublicKey, merklelist server.MerkleResponse) bool {
-	verifyList := []merkle.Substance{}
-	for _, path := range pathList {
-		verifyList = append(verifyList, merkle.FileContent{FileName: path})
-	}
-	verifyTree, err := merkle.NewTree(verifyList)
-	if err != nil {
-		fmt.Println("could not construct verifytree: ", err)
-		return false
-	}
-	err = rsa.VerifyPSS(&pubilcKey, crypto.SHA256, verifyTree.RootHash(), merklelist.MerkleSign, nil)
+func VerifyMerkleSign(pubilcKey rsa.PublicKey, merklelist server.MerkleResponse) bool {
+	err := rsa.VerifyPSS(&pubilcKey, crypto.SHA256, merklelist.MerkleRoot, merklelist.MerkleSign, nil)
 	if err != nil {
 		fmt.Println("could not verify signature: ", err)
 		return false
 	}
 	return true
+}
+
+func CountMerkle(pathList []string) ([]byte, error) {
+	verifyList := []merkle.Substance{}
+	for _, path := range pathList {
+		verifyList = append(verifyList, merkle.FileContent{FileName: path})
+	}
+	verifyTree, err := merkle.NewTree(verifyList)
+	return verifyTree.RootHash(), err
 }
 
 func TestModeBreak(path string) {
